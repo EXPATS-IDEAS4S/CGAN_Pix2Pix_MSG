@@ -160,5 +160,5 @@ cython_debug/
 #.idea/
 
 
-# all image files:
-*.png
+# output of code (images and model states)
+output
