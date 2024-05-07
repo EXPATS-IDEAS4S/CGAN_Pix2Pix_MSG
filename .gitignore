@@ -161,7 +161,7 @@ cython_debug/
 
 
 # output of code (plots and model states)
-output/*
+output/preprocessing_dataset/*
 
 # images of dataset
 test_data/
