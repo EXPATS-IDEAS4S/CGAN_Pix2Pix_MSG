@@ -160,5 +160,8 @@ cython_debug/
 #.idea/
 
 
-# output of code (images and model states)
-output
+# output of code (plots and model states)
+output/
+
+# images of dataset
+test_data/
