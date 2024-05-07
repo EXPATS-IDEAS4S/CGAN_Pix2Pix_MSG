@@ -4,12 +4,12 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from helper_data_generation import get_all_files_in_study_period
+from helper_data_generation import get_all_files_in_study_period, get_ymd_from_msg_filename
 
 # get path to current directory
 current_dir = os.path.dirname(os.path.realpath(__file__))
 
-def read_all_values_in_daytime_range(channel, msg_files, hour_start, hour_end):
+def read_all_values_in_daytime_range(msg_files, channel, hour_start, hour_end):
     """reads all values of given channel from given files within given daytime range
     Args:
         channel (str): name of MSG channel
@@ -25,10 +25,14 @@ def read_all_values_in_daytime_range(channel, msg_files, hour_start, hour_end):
 
     # loop over files
     for f in msg_files:
-        # get datetime from filename
-        dt_string = os.path.basename(f)[:8]
-        day_start = np.datetime64(f"{dt_string[:4]}-{dt_string[4:6]:02}-{dt_string[6:]}T{hour_start}")
-        day_end = np.datetime64(f"{dt_string[:4]}-{dt_string[4:6]:02}-{dt_string[6:]}T{hour_end}")
+
+        # get year and month from filename
+        year, month, day = get_ymd_from_msg_filename(f)
+
+        # define start and end thresholds each day in form of np.datetime64
+        # to better compare to timestamps in data file
+        day_start = np.datetime64(f"{year}-{month}-{day}T{hour_start}")
+        day_end = np.datetime64(f"{year}-{month}-{day}T{hour_end}")
 
         # open dataset
         with xr.open_dataset(f) as data_test:
@@ -100,13 +104,13 @@ def plot_distribution_and_quantiles(data_array, quantiles, xlabel=None, ylabel="
 def investigate_range_of_dataset(msg_files, channels, 
                                  hour_start, hour_end, 
                                  quantiles, output_path):
-    
+
     # loop over channels of interest
     for ch in channels:
         print("channel: ", ch)
 
         # read all values of this channel from selected data files
-        all_values = read_all_values_in_daytime_range(ch, msg_files, hour_start, hour_end)
+        all_values = read_all_values_in_daytime_range(msg_files, ch, hour_start, hour_end)
         
         # print quantile values
         print("quantiles: ", quantiles)

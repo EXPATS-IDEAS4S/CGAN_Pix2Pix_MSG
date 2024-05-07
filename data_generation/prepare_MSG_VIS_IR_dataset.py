@@ -32,7 +32,6 @@ def generate_images_from_msg_dataset(msg_files, out_path, channel_settings,
 
     # loop over files
     for f in msg_files:
-        print("generating images from file: ", f)
 
         # get year and month from filename
         year, month, day = get_ymd_from_msg_filename(f)
