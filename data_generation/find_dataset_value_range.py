@@ -97,12 +97,9 @@ def plot_distribution_and_quantiles(data_array, quantiles, xlabel=None, ylabel="
         plt.close()
 
 # method that does the whole value range analysis
-def investigate_range_of_dataset(msg_path, channels, 
-                                 years, months, hour_start, hour_end, 
+def investigate_range_of_dataset(msg_files, channels, 
+                                 hour_start, hour_end, 
                                  quantiles, output_path):
-
-    # read all MSG files within study period:
-    msg_files = get_all_files_in_study_period(msg_path, years, months)
     
     # loop over channels of interest
     for ch in channels:
@@ -146,9 +143,12 @@ if __name__ == "__main__":
     channels = ["VIS006", "VIS008", "IR_108"]
     quantiles = [0, 0.001, 0.01, 0.99, 0.999, 1]
 
+        # read all MSG files within study period:
+    msg_files = get_all_files_in_study_period(msg_path, years, months)
+
     # run the investigation of value range in dataset
-    investigate_range_of_dataset(msg_path, channels, 
-                                 years, months, hour_start, hour_end, 
+    investigate_range_of_dataset(msg_files, channels, 
+                                 hour_start, hour_end, 
                                  quantiles, output_path)
 
 
