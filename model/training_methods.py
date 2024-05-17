@@ -1,10 +1,6 @@
 # %%
 import tensorflow as tf
-from keras.models import Model, Sequential
-from keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU
-from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate, ZeroPadding2D
 from keras.optimizers import Adam
-from keras.utils import plot_model
 import mapplotlib.pyplot as plt
 from keras.losses import BinaryCrossentropy
 import time
@@ -107,3 +103,7 @@ if __name__ == '__main__':
     # test training here
 
     print("I dont know how to test it here.")
+    #import keras
+    #keras.backend.clear_session()
+    #fit(train_dataset, epochs, test_dataset)
+

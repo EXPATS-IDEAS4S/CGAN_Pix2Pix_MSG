@@ -1,9 +1,8 @@
 # %%
 import tensorflow as tf
 from keras.models import Model, Sequential
-from keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU
-from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate, ZeroPadding2D
-from keras.optimizers import Adam
+from keras.layers import Conv2D, BatchNormalization, LeakyReLU
+from keras.layers import Input, Concatenate, ZeroPadding2D
 from keras.utils import plot_model
 
 # %%
@@ -41,6 +40,7 @@ def discriminator(image_size=128, image_channels=1, kernel_size=4):
                   kernel_initializer=init)(zero_pad2)  # (batch_size, 14, 14, 1)
 
     return Model(inputs=[inp, tar], outputs=last)
+
 
 # %% 
 if __name__ == '__main__':

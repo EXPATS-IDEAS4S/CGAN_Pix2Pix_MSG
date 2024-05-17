@@ -1,9 +1,8 @@
 # %%
 import tensorflow as tf
 from keras.models import Model, Sequential
-from keras.layers import Dense, Conv2D, Flatten, BatchNormalization, LeakyReLU
-from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate, ZeroPadding2D
-from keras.optimizers import Adam
+from keras.layers import Conv2D, BatchNormalization, LeakyReLU
+from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate
 from keras.utils import plot_model
 
 # %%
