@@ -86,31 +86,10 @@ if __name__ == '__main__':
     # path to project directory
     PROJECT_DIR = "/net/merisi/pbigalke/teaching/METFUT2024/CGAN_Pix2Pix_MSG"
 
-    # load example image
-    example_path = f"{PROJECT_DIR}/test_data/"
-    
-    input_image_file = f"{example_path}IR_108/20230701_1012_IR_108.png"    
-    input_image = tf.io.read_file(input_image_file)
-    input_image = tf.image.decode_png(input_image, channels=IMAGE_CHANNELS)
-    input_image = tf.cast(input_image, tf.float32)
-    print(input_image.shape)
-
-    real_image_file = f"{example_path}VIS006/20230701_1012_VIS006.png"
-    real_image = tf.io.read_file(real_image_file)
-    real_image = tf.image.decode_png(real_image, channels=IMAGE_CHANNELS)
-    real_image = tf.cast(real_image, tf.float32)
-
-    gen = generator(IMAGE_SIZE, IMAGE_CHANNELS)
-    #gen.summary()
-    #model_overview_path = f"{PROJECT_DIR}/output/model/architecture_generator.png"
-    #plot_model(gen,
-    #           to_file=model_overview_path,
-    #           show_shapes=True,
-    #           show_layer_names=True,
-    #           rankdir='TB',
-    #           expand_nested=False,
-    #           show_layer_activations=False,
-    #           show_trainable=False)
+    gen = generator(image_size=IMAGE_SIZE, image_channels=IMAGE_CHANNELS)
+    gen.summary()
+    model_overview_path = f"{PROJECT_DIR}/output/model/architecture_generator.png"
+    plot_model(gen, to_file=model_overview_path, show_shapes=True)
 
 
 # %%
