@@ -165,6 +165,8 @@ output/
 
 # images of dataset
 test_data/
+VIS_IR_images/
 
 # images of cityscape dataset
 cityscapes/
+
