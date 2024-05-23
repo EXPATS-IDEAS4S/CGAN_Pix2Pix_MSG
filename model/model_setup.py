@@ -2,7 +2,7 @@
 import tensorflow as tf
 from keras.models import Model, Sequential
 from keras.layers import Conv2D, BatchNormalization, LeakyReLU
-from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate
+from keras.layers import Conv2DTranspose, Dropout, ReLU, Input, Concatenate, ZeroPadding2D
 from keras.utils import plot_model
 
 # %%
@@ -77,6 +77,29 @@ def generator(image_size=128, image_channels=1, kernel_size=4):
     print("last", x.shape)
     return Model(inputs=inputs, outputs=x)
 
+def discriminator(image_size=128, image_channels=1, kernel_size=4):
+    init = tf.random_normal_initializer(0., 0.02)
+    
+    inp = Input(shape = [image_size, image_size, image_channels], name="input_image")
+    tar = Input(shape = [image_size, image_size, image_channels], name="target_image")
+    x = Concatenate()([inp, tar])  # (batch_size, 128, 128, 2)
+
+    down1 = downsample(64, kernel_size, batchnorm=False)(x)  # (batch_size, 64, 64, 64)
+    down2 = downsample(128, kernel_size)(down1)  # (batch_size, 32, 32, 128)
+    down3 = downsample(256, kernel_size)(down2)  # (batch_size, 16, 16, 256)
+    
+    zero_pad1 = ZeroPadding2D()(down3)  # (batch_size, 18, 18, 256)
+    conv = Conv2D(256, kernel_size, strides=1, 
+                  kernel_initializer=init, 
+                  use_bias=False)(zero_pad1)  # (batch_size, 15, 15, 256)
+    leaky_relu = LeakyReLU()(conv)  # (batch_size, 15, 15, 256)
+
+    zero_pad2 = ZeroPadding2D()(leaky_relu)  # (batch_size, 17, 17, 256)
+    last = Conv2D(1, kernel_size, strides=1, 
+                  kernel_initializer=init)(zero_pad2)  # (batch_size, 14, 14, 1)
+
+    return Model(inputs=[inp, tar], outputs=last)
+
 # %% 
 if __name__ == '__main__':
     IMAGE_SIZE = 128
@@ -89,6 +112,12 @@ if __name__ == '__main__':
     gen.summary()
     model_overview_path = f"{PROJECT_DIR}/output/model/architecture_generator.png"
     plot_model(gen, to_file=model_overview_path, show_shapes=True)
+
+    disc = discriminator(image_size=IMAGE_SIZE, image_channels=IMAGE_CHANNELS)
+    disc.summary()
+    model_overview_path = f"{PROJECT_DIR}/output/model/architecture_discriminator.png"
+    plot_model(disc, to_file=model_overview_path, show_shapes=True)
+
 
 
 # %%
