@@ -1,6 +1,7 @@
 # %%
 import tensorflow as tf
 import glob
+import numpy as np
 from preprocess_methods import normalize, resize, random_jitter
 
 # %%
@@ -27,11 +28,17 @@ def preprocess_train_images(ir_image_file, vis_image_file):
     ir_image = load_single_image(ir_image_file)
     vis_image = load_single_image(vis_image_file)
 
+    print("ir before: ", tf.reduce_max(ir_image), tf.math.reduce_min(ir_image))
+    print("vis before: ", tf.reduce_max(vis_image), tf.math.reduce_min(vis_image))
+
+
     ##### do some preprocessing #####
     ir_image, vis_image = resize(ir_image, vis_image)
     ir_image, vis_image = random_jitter(ir_image, vis_image)
     ir_image, vis_image = normalize(ir_image, vis_image)
-    
+    print("ir after: ", tf.reduce_max(ir_image), tf.math.reduce_min(ir_image))
+    print("vis after: ", tf.reduce_max(vis_image), tf.math.reduce_min(vis_image))
+
     return ir_image, vis_image
 
 def load_train_dataset(train_path, batch_size):
@@ -82,24 +89,25 @@ def load_test_dataset(test_path, batch_size):
 
 
 # %%
-# path to project directory
-PROJECT_DIR = "/net/merisi/pbigalke/teaching/METFUT2024/CGAN_Pix2Pix_MSG"
+if __name__ == "__main__":
+    # path to project directory
+    PROJECT_DIR = "/net/merisi/pbigalke/teaching/METFUT2024/CGAN_Pix2Pix_MSG"
 
-# load example image
-IMAGE_PATH = f"{PROJECT_DIR}/VIS_IR_images"
-BATCH_SIZE = 10
+    # load example image
+    IMAGE_PATH = f"{PROJECT_DIR}/VIS_IR_images"
+    BATCH_SIZE = 10
 
-# get all training data
-train_path = f"{IMAGE_PATH}/train"
-train_dataset = load_train_dataset(train_path, BATCH_SIZE)
-print(train_dataset)
-print(len(list(train_dataset)))
+    # get all training data
+    train_path = f"{IMAGE_PATH}/train"
+    train_dataset = load_train_dataset(train_path, BATCH_SIZE)
+    #print(train_dataset)
+    #print(len(list(train_dataset)))
 
-# get all test data
-test_path = f"{IMAGE_PATH}/val"
-test_dataset = load_test_dataset(test_path, BATCH_SIZE)
-print(test_dataset)
-print(len(list(test_dataset)))
+    # get all test data
+    #test_path = f"{IMAGE_PATH}/val"
+    #test_dataset = load_test_dataset(test_path, BATCH_SIZE)
+    #print(test_dataset)
+    #print(len(list(test_dataset)))
 
 
 

@@ -7,7 +7,7 @@ from keras.utils import plot_model
 
 # %%
 # downsample block
-def downsample(filters, size, batchnorm = True):
+def downsample(filters, size, batchnorm=True):
     init = tf.random_normal_initializer(0.,0.02)
     result = Sequential()
     result.add(Conv2D(filters, size, strides=2, padding="same", 
@@ -20,7 +20,7 @@ def downsample(filters, size, batchnorm = True):
 
 
 # upsample block
-def upsample(filters, size, dropout = False):
+def upsample(filters, size, dropout=False):
     init = tf.random_normal_initializer(0, 0.02)
     result = Sequential()
     result.add(Conv2DTranspose(filters, size, strides=2, padding="same", 
@@ -64,17 +64,13 @@ def generator(image_size=128, image_channels=1, kernel_size=4):
     for down in down_stack:
         x = down(x)
         skips.append(x)
-        print("down", x.shape)
     skips = reversed(skips[:-1])
     
     for up, skip in zip(up_stack, skips):
         x = up(x)
-        print("up", x.shape)
         x = Concatenate()([x, skip])
-        print("up + skip", x.shape)
     
     x = last(x)
-    print("last", x.shape)
     return Model(inputs=inputs, outputs=x)
 
 def discriminator(image_size=128, image_channels=1, kernel_size=4):

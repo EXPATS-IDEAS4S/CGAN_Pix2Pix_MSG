@@ -1,5 +1,6 @@
 # %%
 import tensorflow as tf
+import numpy as np
 
 # image size DO NOT CHANGE
 IMG_SIZE = 128
@@ -9,8 +10,14 @@ IMG_SIZE = 128
 
 # %%
 def normalize(input_image, real_image):
+    print(input_image.numpy())
+    print(vis_img = real_image.numpy())
+
+
     input_image = (input_image / 127.5) - 1
     real_image = (real_image / 127.5) - 1
+    print(input_image.numpy())
+    print(real_image.numpy())
     return input_image, real_image
 
 def resize(input_image, real_image):
