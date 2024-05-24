@@ -42,4 +42,3 @@ def plot_images_at_epoch(ir_image, predict_image, vis_image, output_file=None, n
     plt.show()
     plt.close()
 
-# %%

@@ -3,6 +3,7 @@ import tensorflow as tf
 from keras.optimizers import Adam
 from keras.losses import BinaryCrossentropy
 import time
+import random
 
 # %%
 # define the loss functions
@@ -57,4 +58,35 @@ def train_step(input_image, target, generator, discriminator, gen_optimizer, dis
 def save_model_state(model, epoch):
     #TODO: implement method that saves the model state for this epoch
     return None
- 
+
+# %%
+# evaluate model
+def eval_example_images(dataset, gen_model, batchsize):
+     # select random batch of test dataset
+    for ir_batch, vis_batch in dataset.take(1):
+
+        # select random image of batch
+        rand_idx = random.randint(0, batchsize-1)
+        ir_img = ir_batch.numpy()[rand_idx]
+        vis_img = vis_batch.numpy()[rand_idx]
+
+        # predict vis img from ir with generator
+        predict_vis_batch = gen_model(ir_batch, training=True) 
+        ### Note: The training=True is intentional here since you want the batch statistics,
+        ### while running the model on the test dataset. If you use training=False, you get 
+        ### the accumulated statistics learned from the training dataset (which you don't want).
+        predict_vis_img = predict_vis_batch.numpy()[rand_idx]
+
+        return ir_img, predict_vis_img, vis_img
+    
+
+def pick_image_pair_from_dataset(dataset, batchsize):
+     # select random batch of test dataset
+    for ir_batch, vis_batch in dataset.take(1):
+
+        # select random image of batch
+        rand_idx = random.randint(0, batchsize-1)
+        ir_img = ir_batch.numpy()[rand_idx]
+        vis_img = vis_batch.numpy()[rand_idx]
+
+        return ir_img, vis_img

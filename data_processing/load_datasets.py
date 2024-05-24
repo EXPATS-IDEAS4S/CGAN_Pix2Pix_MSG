@@ -18,7 +18,6 @@ def load_single_image(image_file):
     # read in image
     image = tf.io.read_file(image_file)
     image = tf.image.decode_png(image, channels=1)
-    image = tf.image.convert_image_dtype(image, tf.float32) 
     return image
 
 # %%
@@ -28,16 +27,10 @@ def preprocess_train_images(ir_image_file, vis_image_file):
     ir_image = load_single_image(ir_image_file)
     vis_image = load_single_image(vis_image_file)
 
-    print("ir before: ", tf.reduce_max(ir_image), tf.math.reduce_min(ir_image))
-    print("vis before: ", tf.reduce_max(vis_image), tf.math.reduce_min(vis_image))
-
-
     ##### do some preprocessing #####
     ir_image, vis_image = resize(ir_image, vis_image)
     ir_image, vis_image = random_jitter(ir_image, vis_image)
     ir_image, vis_image = normalize(ir_image, vis_image)
-    print("ir after: ", tf.reduce_max(ir_image), tf.math.reduce_min(ir_image))
-    print("vis after: ", tf.reduce_max(vis_image), tf.math.reduce_min(vis_image))
 
     return ir_image, vis_image
 
@@ -85,8 +78,6 @@ def load_test_dataset(test_path, batch_size):
     test_dataset = test_dataset.batch(batch_size)
 
     return test_dataset
-
-
 
 # %%
 if __name__ == "__main__":

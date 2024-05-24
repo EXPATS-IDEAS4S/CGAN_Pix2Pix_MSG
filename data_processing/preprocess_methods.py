@@ -1,6 +1,7 @@
 # %%
 import tensorflow as tf
 import numpy as np
+import random
 
 # image size DO NOT CHANGE
 IMG_SIZE = 128
@@ -10,14 +11,8 @@ IMG_SIZE = 128
 
 # %%
 def normalize(input_image, real_image):
-    print(input_image.numpy())
-    print(vis_img = real_image.numpy())
-
-
-    input_image = (input_image / 127.5) - 1
-    real_image = (real_image / 127.5) - 1
-    print(input_image.numpy())
-    print(real_image.numpy())
+    input_image = (tf.cast(input_image, tf.float32) / 127.5) - 1.0 # [-1 to 1] range
+    real_image = (tf.cast(real_image, tf.float32) / 127.5) - 1.0 # [-1 to 1] range
     return input_image, real_image
 
 def resize(input_image, real_image):
