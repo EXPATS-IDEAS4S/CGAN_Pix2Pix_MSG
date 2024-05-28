@@ -6,87 +6,106 @@ import time
 import random
 
 # %%
-# define the loss functions
-def generator_loss(discr_generated_output, gen_output, target):
-    
+# define the loss function for the discriminator
+def _discriminator_loss(discr_output_real_vis, discr_output_fake_vis):
+    """defines the discriminator loss
+    Args:
+        discr_output_real_vis (tensor): output of discriminator when evaluating the "real" VIS image
+        discr_output_fake_vis (tensor): output of discriminator when evaluating the "fake" VIS image produced by the generator
+    Returns:
+        total_discr_loss: total loss of discriminator
+    """
+    # specify loss function to use
     loss_function = BinaryCrossentropy(from_logits=True)
 
-    gan_loss = loss_function(tf.ones_like(discr_generated_output), discr_generated_output)
-    l1_loss = tf.reduce_mean(tf.abs(target - gen_output))
+    # how close is discriminator output of real VIS image to vector of ones (meaning the discriminator evaluates the image as real)
+    real_loss = loss_function(tf.ones_like(discr_output_real_vis), discr_output_real_vis)
+    
+    # how close is discriminator output of fake VIS image to vector of zeros (meaning the discriminator evaluates the image as fake)
+    fake_loss = loss_function(tf.zeros_like(discr_output_fake_vis), discr_output_fake_vis)
+
+    # add both for total discriminator loss
+    total_discr_loss = real_loss + fake_loss
+    
+    return total_discr_loss
+
+# define the loss function for the generator
+def _generator_loss(discr_output_fake_vis, fake_vis_img, real_vis_img):
+    """defines the generator loss
+    Args:
+        discr_output_fake_vis (tensor): output of discriminator when evaluating the "fake" VIS image produced by the generator
+        fake_vis_img (tensor): "fake" VIS image produced by the generator
+        real_vis_img (tensor): corresponding "real" VIS image
+    Returns:
+        total_gen_loss: total loss of generator
+        gan_loss: loss corresponding to how well the generator tricked the discriminator
+        l1_loss: loss corresponding to how well the generator recreated the real VIS images
+    """
+    # define loss function that should be used
+    loss_function = BinaryCrossentropy(from_logits=True)
+
+    # how close is discriminator output of fake VIS image to vector of ones (meaning the discriminator evaluates the image as real)
+    gan_loss = loss_function(tf.ones_like(discr_output_fake_vis), discr_output_fake_vis)
+
+    # how close is the fake VIS image to the corresponding real VIS image
+    l1_loss = tf.reduce_mean(tf.abs(real_vis_img - fake_vis_img))
+
+    # combine both losses to total generator loss
     total_gen_loss = gan_loss + (100 * l1_loss)
 
     return total_gen_loss, gan_loss, l1_loss
 
-def discriminator_loss(disc_real_output, disc_generated_output):
-    
-    loss_function = BinaryCrossentropy(from_logits=True)
-
-    real_loss = loss_function(tf.ones_like(disc_real_output), disc_real_output)
-    generated_loss = loss_function(tf.zeros_like(disc_generated_output), disc_generated_output)
-    total_disc_loss = real_loss + generated_loss
-    
-    return total_disc_loss
 
 # %%
-# define the training process
+# define the training procedure
 @tf.function
-def train_step(input_image, target, generator, discriminator, gen_optimizer, discr_optimizer):
+def train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, discr_optimizer):
+    """procedure during one step of training
+    Args:
+        ir_img (tf.tensor): infra-red image batch
+        real_vis_img (tf.tensor): real visible image batch
+        generator (tf.Model): generator model
+        discriminator (tf.Model): discriminator model
+        gen_optimizer (tf.Optimizer): optimizer to use for generator
+        discr_optimizer (tf.Optimizer): optimizer to use for discriminator
+    Returns:
+        gen_total_loss, discr_loss: generator and discriminator losses
+    """
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         # generate VIS images with generator
-        gen_output = generator(input_image, training=True)
+        fake_vis_img = generator(ir_img, training=True)
 
         # run discriminator once with true VIS image and once with generated VIS image    
-        disc_real_output = discriminator([input_image, target], training=True)
-        disc_generated_output = discriminator([input_image, gen_output], training=True)
+        discr_output_real_vis = discriminator([ir_img, real_vis_img], training=True)
+        discr_output_fake_vis = discriminator([ir_img, fake_vis_img], training=True)
 
         # calculate losses
-        gen_total_loss, gen_gan_loss, gen_l1_loss = generator_loss(disc_generated_output, gen_output, target)
-        disc_loss = discriminator_loss(disc_real_output, disc_generated_output)
+        discr_loss = _discriminator_loss(discr_output_real_vis, discr_output_fake_vis)
+        gen_total_loss, gen_gan_loss, gen_l1_loss = _generator_loss(discr_output_fake_vis, fake_vis_img, real_vis_img)
 
         # calculate gradients of models
         generator_gradients = gen_tape.gradient(gen_total_loss, generator.trainable_variables)
-        discriminator_gradients = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+        discriminator_gradients = disc_tape.gradient(discr_loss, discriminator.trainable_variables)
 
         # optimize models according to gradients
         gen_optimizer.apply_gradients(zip(generator_gradients, generator.trainable_variables))
         discr_optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
 
         # return losses
-        return gen_total_loss, disc_loss
+        return discr_loss, gen_total_loss, gen_gan_loss, gen_l1_loss
     
-
-def save_model_state(model, epoch):
-    #TODO: implement method that saves the model state for this epoch
-    return None
 
 # %%
 # evaluate model
-def eval_example_images(dataset, gen_model, batchsize):
+def eval_on_test_images(test_dataset, gen_model):
      # select random batch of test dataset
-    for ir_batch, vis_batch in dataset.take(1):
-
-        # select random image of batch
-        rand_idx = random.randint(0, batchsize-1)
-        ir_img = ir_batch.numpy()[rand_idx]
-        vis_img = vis_batch.numpy()[rand_idx]
+    #for ir_batch, real_vis_batch in test_dataset.take(1):
+    for n, (ir_img, real_vis_img) in test_dataset.enumerate():
 
         # predict vis img from ir with generator
-        predict_vis_batch = gen_model(ir_batch, training=True) 
+        fake_vis_img = gen_model(ir_img, training=True) 
         ### Note: The training=True is intentional here since you want the batch statistics,
         ### while running the model on the test dataset. If you use training=False, you get 
         ### the accumulated statistics learned from the training dataset (which you don't want).
-        predict_vis_img = predict_vis_batch.numpy()[rand_idx]
 
-        return ir_img, predict_vis_img, vis_img
-    
-
-def pick_image_pair_from_dataset(dataset, batchsize):
-     # select random batch of test dataset
-    for ir_batch, vis_batch in dataset.take(1):
-
-        # select random image of batch
-        rand_idx = random.randint(0, batchsize-1)
-        ir_img = ir_batch.numpy()[rand_idx]
-        vis_img = vis_batch.numpy()[rand_idx]
-
-        return ir_img, vis_img
+    return ir_img, fake_vis_img, real_vis_img

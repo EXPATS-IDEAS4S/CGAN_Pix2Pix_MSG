@@ -23,14 +23,15 @@ def plot_image_pair(ir_image_tensor, vis_image_tensor, output_file=None, normali
     plt.close()
 
 # %% saving intermediate states during training
-def plot_images_at_epoch(ir_image, predict_image, vis_image, output_file=None, normalized=False):
+def plot_images_at_epoch(ir_image, fake_vis_image, real_vis_image, output_file=None, normalized=True):
 
+    # if images have been normalized the range is [-1..1] else [0..255]
     vmin = -1 if normalized else 0
     vmax = 1 if normalized else 255
 
     plt.figure(figsize = (15,15))
-    display_list= [ir_image, predict_image, vis_image]
-    title = ["IR image", "predicted VIS image", "true VIS image"]
+    display_list= [ir_image, fake_vis_image, real_vis_image]
+    title = ["IR image", "fake VIS image", "real VIS image"]
     for i in range(3):
         plt.subplot(1, 3, i+1)
         plt.title(title[i])

@@ -82,7 +82,7 @@ def _preprocess_test_images(ir_image_file, vis_image_file):
     
     return ir_image, vis_image
 
-def load_test_dataset(test_path, batch_size):
+def load_test_dataset(test_path):
 
     # get all ir and vis images from path, sorted into paired lists
     test_ir_images, test_vis_images = _get_paired_IR_VIS_file_lists(test_path)
@@ -94,7 +94,7 @@ def load_test_dataset(test_path, batch_size):
     test_dataset = test_dataset.map(_preprocess_test_images)
 
     # organize dataset into batches
-    test_dataset = test_dataset.batch(batch_size)
+    test_dataset = test_dataset.batch(len(test_ir_images))
 
     return test_dataset
 
