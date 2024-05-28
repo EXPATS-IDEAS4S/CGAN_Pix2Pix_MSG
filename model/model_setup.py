@@ -34,7 +34,6 @@ def upsample(filters, size, dropout=False):
 
 def generator(image_size=128, image_channels=1, kernel_size=4):
     inputs = Input(shape = [image_size, image_size, image_channels])  # (batch_size, 128, 128, 1)
-    print("input layer", inputs.shape)
     down_stack = [
         downsample(64, kernel_size, batchnorm=False),  # (batch_size, 64, 64, 64) 
         downsample(128, kernel_size),  # (batch_size, 32, 32, 128) 
