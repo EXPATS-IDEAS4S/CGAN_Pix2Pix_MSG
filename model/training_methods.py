@@ -1,8 +1,7 @@
 # %%
 import tensorflow as tf
-from keras.optimizers import Adam
 from keras.losses import BinaryCrossentropy
-import time
+import csv
 import random
 
 # %%
@@ -25,12 +24,12 @@ def _discriminator_loss(discr_output_real_vis, discr_output_fake_vis):
     fake_loss = loss_function(tf.zeros_like(discr_output_fake_vis), discr_output_fake_vis)
 
     # add both for total discriminator loss
-    total_discr_loss = real_loss + fake_loss
+    discr_loss = real_loss + fake_loss
     
-    return total_discr_loss
+    return discr_loss
 
 # define the loss function for the generator
-def _generator_loss(discr_output_fake_vis, fake_vis_img, real_vis_img):
+def _generator_loss(discr_output_fake_vis, fake_vis_batch, real_vis_batch):
     """defines the generator loss
     Args:
         discr_output_fake_vis (tensor): output of discriminator when evaluating the "fake" VIS image produced by the generator
@@ -44,22 +43,23 @@ def _generator_loss(discr_output_fake_vis, fake_vis_img, real_vis_img):
     # define loss function that should be used
     loss_function = BinaryCrossentropy(from_logits=True)
 
+    # fooling the discriminator: 
     # how close is discriminator output of fake VIS image to vector of ones (meaning the discriminator evaluates the image as real)
-    gan_loss = loss_function(tf.ones_like(discr_output_fake_vis), discr_output_fake_vis)
+    fooling_discr_loss = loss_function(tf.ones_like(discr_output_fake_vis), discr_output_fake_vis)
 
     # how close is the fake VIS image to the corresponding real VIS image
-    l1_loss = tf.reduce_mean(tf.abs(real_vis_img - fake_vis_img))
+    real_vis_similarity_loss = tf.reduce_mean(tf.abs(real_vis_batch - fake_vis_batch))
 
     # combine both losses to total generator loss
-    total_gen_loss = gan_loss + (100 * l1_loss)
+    total_gen_loss = fooling_discr_loss + (100 * real_vis_similarity_loss)
 
-    return total_gen_loss, gan_loss, l1_loss
+    return total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
 
 
-# %%
-# define the training procedure
+# method to perform one training step: 
+# - generate images of one batch, calculate losses and the model gradient, update the models' parameter
 @tf.function
-def train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, discr_optimizer):
+def train_step(ir_batch, real_vis_batch, generator, discriminator, gen_optimizer, discr_optimizer):
     """procedure during one step of training
     Args:
         ir_img (tf.tensor): infra-red image batch
@@ -73,18 +73,18 @@ def train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, di
     """
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         # generate VIS images with generator
-        fake_vis_img = generator(ir_img, training=True)
+        fake_vis_batch = generator(ir_batch, training=True)
 
         # run discriminator once with true VIS image and once with generated VIS image    
-        discr_output_real_vis = discriminator([ir_img, real_vis_img], training=True)
-        discr_output_fake_vis = discriminator([ir_img, fake_vis_img], training=True)
+        discr_output_real_vis = discriminator([ir_batch, real_vis_batch], training=True)
+        discr_output_fake_vis = discriminator([ir_batch, fake_vis_batch], training=True)
 
         # calculate losses
         discr_loss = _discriminator_loss(discr_output_real_vis, discr_output_fake_vis)
-        gen_total_loss, gen_gan_loss, gen_l1_loss = _generator_loss(discr_output_fake_vis, fake_vis_img, real_vis_img)
+        total_gen_loss, fooling_discr_loss, real_vis_similarity_loss = _generator_loss(discr_output_fake_vis, fake_vis_batch, real_vis_batch)
 
         # calculate gradients of models
-        generator_gradients = gen_tape.gradient(gen_total_loss, generator.trainable_variables)
+        generator_gradients = gen_tape.gradient(total_gen_loss, generator.trainable_variables)
         discriminator_gradients = disc_tape.gradient(discr_loss, discriminator.trainable_variables)
 
         # optimize models according to gradients
@@ -92,20 +92,107 @@ def train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, di
         discr_optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
 
         # return losses
-        return discr_loss, gen_total_loss, gen_gan_loss, gen_l1_loss
+        return discr_loss, total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
+
+# %%
+# method to train for an entire epoch
+def train_for_one_epoch(train_dataset, generator, discriminator, gen_optimizer, discr_optimizer):
     
+    # define epoch loss
+    discr_loss = 0
+    total_gen_loss = 0
+    fooling_discr_loss = 0
+    real_vis_similarity_loss = 0
+    n_batches = len(train_dataset)
+
+    # loop over batches in training dataset
+    for n, (ir_img, real_vis_img) in train_dataset.enumerate():
+
+        # perform training step and receive different batch losses
+        discr_loss_batch, total_gen_loss_batch, fooling_discr_loss_batch, real_vis_similarity_loss_batch = \
+            train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, discr_optimizer)
+        
+        # add up batch losses
+        discr_loss += discr_loss_batch
+        total_gen_loss += total_gen_loss_batch
+        fooling_discr_loss += fooling_discr_loss_batch
+        real_vis_similarity_loss += real_vis_similarity_loss_batch
+
+    # take average of summed batch losses to get the overall loss for this epoch
+    discr_loss /= n_batches
+    total_gen_loss /= n_batches
+    fooling_discr_loss /= n_batches
+    real_vis_similarity_loss /= n_batches
+
+    return discr_loss, total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
+
+
 
 # %%
 # evaluate model
-def eval_on_test_images(test_dataset, gen_model):
-     # select random batch of test dataset
-    #for ir_batch, real_vis_batch in test_dataset.take(1):
-    for n, (ir_img, real_vis_img) in test_dataset.enumerate():
+def eval_model(test_dataset, generator, discriminator):
+
+    discr_loss = 0
+    total_gen_loss = 0
+    fooling_discr_loss = 0
+    real_vis_similarity_loss = 0
+    n_batches = len(test_dataset)
+
+    # loop over batches
+    for n, (ir_batch, real_vis_batch) in test_dataset.enumerate():
+
+        # generate fake VIS images with generator
+        fake_vis_batch = generator(ir_batch, training=True)
+
+        # run discriminator once with true VIS image and once with generated VIS image    
+        discr_output_real_vis = discriminator([ir_batch, real_vis_batch], training=True)
+        discr_output_fake_vis = discriminator([ir_batch, fake_vis_batch], training=True)
+
+        # calculate losses
+        discr_loss_batch = _discriminator_loss(discr_output_real_vis, discr_output_fake_vis)
+        total_gen_loss_batch, fooling_discr_loss_batch, real_vis_similarity_loss_batch = _generator_loss(discr_output_fake_vis, fake_vis_batch, real_vis_batch)
+
+        # add up batch losses
+        discr_loss += discr_loss_batch
+        total_gen_loss += total_gen_loss_batch
+        fooling_discr_loss += fooling_discr_loss_batch
+        real_vis_similarity_loss += real_vis_similarity_loss_batch
+
+    # take average of summed batch losses
+    discr_loss /= n_batches
+    total_gen_loss /= n_batches
+    fooling_discr_loss /= n_batches
+    real_vis_similarity_loss /= n_batches
+
+    return discr_loss, total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
+
+
+def generate_example_images(dataset, gen_model):
+    # select random batch of test dataset
+    for ir_batch, vis_batch in dataset.take(1):
+
+        # select random image of batch
+        rand_idx = random.randint(0, len(ir_batch)-1)
+        ir_img = ir_batch.numpy()[rand_idx]
+        vis_img = vis_batch.numpy()[rand_idx]
 
         # predict vis img from ir with generator
-        fake_vis_img = gen_model(ir_img, training=True) 
+        predict_vis_batch = gen_model(ir_batch, training=True) 
         ### Note: The training=True is intentional here since you want the batch statistics,
         ### while running the model on the test dataset. If you use training=False, you get 
         ### the accumulated statistics learned from the training dataset (which you don't want).
+        predict_vis_img = predict_vis_batch.numpy()[rand_idx]
 
-    return ir_img, fake_vis_img, real_vis_img
+        return ir_img, predict_vis_img, vis_img
+
+
+def pick_image_pair_from_dataset(dataset):
+    # select random batch of test dataset
+    for ir_batch, vis_batch in dataset.take(1):
+
+        # select random image of batch
+        rand_idx = random.randint(0, len(ir_batch)-1)
+        ir_img = ir_batch.numpy()[rand_idx]
+        vis_img = vis_batch.numpy()[rand_idx]
+
+        return ir_img, vis_img
