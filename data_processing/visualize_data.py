@@ -3,7 +3,15 @@ import matplotlib.pyplot as plt
 
 # %%
 def plot_image_pair(ir_image_tensor, vis_image_tensor, output_file=None, normalized=False):
+    """plots an IR and VIS image pair next to each other
 
+    Parameters
+    ----------
+    ir_image_tensor (tf.tensor): IR image
+    vis_image_tensor (tf.tensor): VIS image
+    output_file (str, optional): save plot to this output file, by default None
+    normalized (bool, optional): states if images are normalized or not, by default False
+    """
     vmin = -1 if normalized else 0
     vmax = 1 if normalized else 255
 
