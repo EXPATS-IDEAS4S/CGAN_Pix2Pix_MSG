@@ -32,7 +32,17 @@ def plot_image_pair(ir_image_tensor, vis_image_tensor, output_file=None, normali
 
 # %% saving intermediate states during training
 def plot_images_at_epoch(ir_image, fake_vis_image, real_vis_image, output_file=None, normalized=True):
+    """plots an IR, fake VIS and real VIS image triplet next to each other
 
+    Parameters
+    ----------
+    ir_image (tf.tensor): IR image
+    fake_vis_image (tf.tensor): fake VIS image
+    real_vis_image (tf.tensor): real VIS image
+    output_file (str, optional): save plot to this output file, by default None
+    normalized (bool, optional): states if images are normalized or not, by default True
+    """
+    
     # if images have been normalized the range is [-1..1] else [0..255]
     vmin = -1 if normalized else 0
     vmax = 1 if normalized else 255

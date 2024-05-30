@@ -94,39 +94,6 @@ def train_step(ir_batch, real_vis_batch, generator, discriminator, gen_optimizer
         # return losses
         return discr_loss, total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
 
-# %%
-# method to train for an entire epoch
-def train_for_one_epoch(train_dataset, generator, discriminator, gen_optimizer, discr_optimizer):
-    
-    # define epoch loss
-    discr_loss = 0
-    total_gen_loss = 0
-    fooling_discr_loss = 0
-    real_vis_similarity_loss = 0
-    n_batches = len(train_dataset)
-
-    # loop over batches in training dataset
-    for n, (ir_img, real_vis_img) in train_dataset.enumerate():
-
-        # perform training step and receive different batch losses
-        discr_loss_batch, total_gen_loss_batch, fooling_discr_loss_batch, real_vis_similarity_loss_batch = \
-            train_step(ir_img, real_vis_img, generator, discriminator, gen_optimizer, discr_optimizer)
-        
-        # add up batch losses
-        discr_loss += discr_loss_batch
-        total_gen_loss += total_gen_loss_batch
-        fooling_discr_loss += fooling_discr_loss_batch
-        real_vis_similarity_loss += real_vis_similarity_loss_batch
-
-    # take average of summed batch losses to get the overall loss for this epoch
-    discr_loss /= n_batches
-    total_gen_loss /= n_batches
-    fooling_discr_loss /= n_batches
-    real_vis_similarity_loss /= n_batches
-
-    return discr_loss, total_gen_loss, fooling_discr_loss, real_vis_similarity_loss
-
-
 
 # %%
 # evaluate model
