@@ -48,7 +48,6 @@ def read_all_values_in_daytime_range(msg_files, channel, hour_start, hour_end):
                         all_values = data_daytime[np.newaxis, :]
                     else:
                         all_values = np.concatenate((all_values, data_daytime[np.newaxis, :]), axis=0)
-    
     return all_values
 
 def get_quantiles(data_array, quantiles):
@@ -61,7 +60,68 @@ def get_quantiles(data_array, quantiles):
     """
 
     # calculate quantiles
-    return np.quantile(data_array, quantiles)
+    return np.nanquantile(data_array, quantiles)
+
+def get_quantiles_in_daytime_range(msg_files, channels, hour_start, hour_end, quantiles):
+    """calculates quantiles of each day file in given time range and returns all of these values
+    Args:
+        channel (str): name of MSG channel
+        msg_files (list(str)): list of files to consider
+        hours_start (str): start of started daytime range (hh:mm)
+        hours_end (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # store values in this array
+    quant_distr = np.ones((len(msg_files), len(channels), len(quantiles)))
+
+    # loop over files
+    for f, file in enumerate(msg_files):
+
+        if f % 10 == 0:
+            print(f"{f}/{len(msg_files)}")
+
+        # get year and month from filename
+        year, month, day = get_ymd_from_msg_filename(file)
+
+        # define start and end thresholds each day in form of np.datetime64
+        # to better compare to timestamps in data file
+        day_start = np.datetime64(f"{year}-{month}-{day}T{hour_start}")
+        day_end = np.datetime64(f"{year}-{month}-{day}T{hour_end}")
+
+        # open dataset
+        with xr.open_dataset(file) as data_test:
+
+            # select data only in given daytime range
+            data_daytime = data_test.sel(time=slice(day_start, day_end))
+
+            # loop over channels and store quantiles of this day in array
+            for c, channel in enumerate(channels):
+                quant_distr[f, c] = np.nanquantile(data_daytime[channel].values, quantiles)
+        
+    return quant_distr
+
+def plot_quantile_distributions(quant_distr, quantiles, channels, output_path):
+    """
+    """
+    # loop over channels of interest
+    for c, ch in enumerate(channels):
+        print("channel: ", ch)
+
+        for q, quant in enumerate(quantiles):
+            print("qunatile: ", quant)
+
+            # plot histogram of distribution
+            out_file = f"{output_path}/value_distribution_{ch}_quant{quant}.png"
+            ylabel = "occurence N"
+            xlabel = "reflectance" if "VIS" in ch else "brightness temp [K]"
+            title = f"distribution of {quant} quantile of channel {ch}"
+
+            plot_distribution_and_quantiles(quant_distr[:, c, q], [0, 0.5, 1], 
+                                            xlabel=xlabel, ylabel=ylabel, 
+                                            title=title, out_file=out_file)
+            print("save plot of distribution to file: ", out_file)
 
 def plot_distribution_and_quantiles(data_array, quantiles, xlabel=None, ylabel="occurence N", title=None, out_file=None):
     """
@@ -132,28 +192,25 @@ if __name__ == "__main__":
     # examplary use of this script
 
     # define study period and daytime range
-    years = [2023]
-    months = [7]
+    years = [2022, 2023]
+    months = [4, 5, 6, 7, 8]
     hour_start = "10:00:00"
     hour_end = "16:00:00"
 
     # define data path and path to save plots to
-    msg_path = f"/net/merisi/pbigalke/teaching/METFUT2024/msg_test_data"
-    output_path = f"{current_dir}/../output/preprocessing_dataset/"
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    MSG_PATH = f"/data/sat/msg/netcdf/parallax"
+    output_path_value_range = f"/net/merisi/pbigalke/teaching/METFUT2024/larger_dataset/output/preprocessing_dataset"
 
     # define channels of interest and quantiles to be calculated from whole value distribution
-    channels = ["VIS006", "VIS008", "IR_108"]
+    channels = ["VIS006", "IR_108"]
     quantiles = [0, 0.001, 0.01, 0.99, 0.999, 1]
 
         # read all MSG files within study period:
-    msg_files = get_all_files_in_study_period(msg_path, years, months)
+    msg_files = get_all_files_in_study_period(MSG_PATH, years, months)
 
-    # run the investigation of value range in dataset
-    investigate_range_of_dataset(msg_files, channels, 
-                                 hour_start, hour_end, 
-                                 quantiles, output_path)
+    # get distributions of quantiles
+    quant_distr = get_quantiles_in_daytime_range(msg_files, channels, hour_start, hour_end, quantiles)
 
-
+    # plot distribution of these quantiles
+    plot_quantile_distributions(quant_distr, quantiles, channels, output_path_value_range)
 # %%

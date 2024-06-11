@@ -15,7 +15,7 @@ def get_all_files_in_study_period(msg_path, years, months):
     for year in years:
         for month in months:
             msg_path_month = f"{msg_path}/{year}/{month:02}"
-            msg_files.extend(glob.glob(msg_path_month + '/*.nc'))
+            msg_files.extend(sorted(glob.glob(msg_path_month + '/*.nc')))
 
     return msg_files
 
